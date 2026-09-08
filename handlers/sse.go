@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
-
 	"mcp-etoolstec-editfiles/auth"
 	"mcp-etoolstec-editfiles/logger"
 	"mcp-etoolstec-editfiles/mcp"
+
+	"github.com/google/uuid"
 )
 
 func HandleSSE(w http.ResponseWriter, r *http.Request) {
@@ -22,6 +22,13 @@ func HandleSSE(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", 500)
+		return
+	}
 
 	sessionID := uuid.New().String()
 	ch := make(chan string, 100)
@@ -33,24 +40,15 @@ func HandleSSE(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info("Nova sessão SSE criada: %s", sessionID)
 
-	// Send endpoint event
+	// Só UM endpoint, relativo - cliente resolve
 	endpoint := fmt.Sprintf("/mcp?sessionId=%s", sessionID)
-	scheme := "https"
-	if r.TLS == nil && r.Host == "localhost:8001" {
-		scheme = "http"
+	if token := r.URL.Query().Get("token"); token != "" {
+		endpoint += "&token=" + token
 	}
 	fmt.Fprintf(w, "event: endpoint\ndata: %s\n\n", endpoint)
-	absURL := fmt.Sprintf("%s://%s%s", scheme, r.Host, endpoint)
-	fmt.Fprintf(w, "event: endpoint\ndata: %s\n\n", absURL)
-
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "Streaming unsupported", 500)
-		return
-	}
 	flusher.Flush()
 
-	// Keep connection open and stream messages
+	// Loop
 	for {
 		select {
 		case msg := <-ch:

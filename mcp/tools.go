@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"mcp-etoolstec-editfiles/config"
 	"mcp-etoolstec-editfiles/logger"
@@ -136,30 +137,89 @@ func executeEditFile(args map[string]interface{}) (interface{}, interface{}) {
 		return nil, map[string]interface{}{"code": -32602, "message": "path not allowed"}
 	}
 
+	// LOG: Início da operação
+	logger.Info("Iniciando edição de arquivo: %s", path)
+	logger.Debug("Tamanho do conteúdo: %d bytes", len(content))
+
 	// Verificar se arquivo existe antes de editar
 	fileExists := true
-	oldContent := ""
-	if _, err := os.Stat(path); err == nil {
+	oldSize := 0
+	if info, err := os.Stat(path); err == nil {
 		oldData, err := os.ReadFile(path)
 		if err == nil {
-			oldContent = string(oldData)
+			oldSize = len(oldData)
 		}
-	} else {
+		logger.Info("Arquivo existente: %s (tamanho: %d bytes, modificado: %s)",
+			path, oldSize, info.ModTime().Format("2006-01-02 15:04:05"))
+	} else if os.IsNotExist(err) {
 		fileExists = false
+		logger.Info("Arquivo não existe, será criado: %s", path)
+	} else {
+		// Erro ao verificar o arquivo
+		logger.Error("Erro ao verificar existência do arquivo %s: %v", path, err)
+		return nil, map[string]interface{}{"code": -32603, "message": "error checking file: " + err.Error()}
 	}
 
 	// Criar diretório se não existir
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		logger.Error("Erro ao criar diretório %s: %v", dir, err)
-		return nil, map[string]interface{}{"code": -32603, "message": err.Error()}
+		logger.Error("ERRO CRÍTICO: Falha ao criar diretório %s: %v", dir, err)
+		logger.FileOperation("edit_file_error", path, map[string]interface{}{
+			"error":      err.Error(),
+			"error_type": "mkdir_failed",
+			"directory":  dir,
+		})
+		return nil, map[string]interface{}{"code": -32603, "message": "failed to create directory: " + err.Error()}
 	}
 
-	// Escrever arquivo
-	err := os.WriteFile(path, []byte(content), 0644)
-	if err != nil {
-		logger.Error("Erro ao escrever %s: %v", path, err)
-		return nil, map[string]interface{}{"code": -32603, "message": err.Error()}
+	// Tentar escrever o arquivo
+	logger.Info("Tentando escrever arquivo: %s", path)
+
+	// Criar um arquivo temporário primeiro (para evitar corrupção)
+	tmpPath := path + ".tmp"
+	if err := os.WriteFile(tmpPath, []byte(content), 0644); err != nil {
+		logger.Error("ERRO CRÍTICO: Falha ao escrever arquivo temporário %s: %v", tmpPath, err)
+		logger.FileOperation("edit_file_error", path, map[string]interface{}{
+			"error":          err.Error(),
+			"error_type":     "write_tmp_failed",
+			"temporary_path": tmpPath,
+			"content_size":   len(content),
+		})
+
+		// Limpar arquivo temporário se existir
+		os.Remove(tmpPath)
+		return nil, map[string]interface{}{"code": -32603, "message": "failed to write file: " + err.Error()}
+	}
+
+	// Renomear temporário para o arquivo final (atômico)
+	if err := os.Rename(tmpPath, path); err != nil {
+		logger.Error("ERRO CRÍTICO: Falha ao renomear arquivo %s -> %s: %v", tmpPath, path, err)
+		logger.FileOperation("edit_file_error", path, map[string]interface{}{
+			"error":          err.Error(),
+			"error_type":     "rename_failed",
+			"temporary_path": tmpPath,
+		})
+
+		// Limpar arquivo temporário
+		os.Remove(tmpPath)
+		return nil, map[string]interface{}{"code": -32603, "message": "failed to save file: " + err.Error()}
+	}
+
+	// Verificar se o arquivo foi realmente escrito
+	if info, err := os.Stat(path); err == nil {
+		if info.Size() != int64(len(content)) {
+			logger.Error("ERRO: Tamanho do arquivo não corresponde! Esperado: %d, Obtido: %d",
+				len(content), info.Size())
+			logger.FileOperation("edit_file_size_mismatch", path, map[string]interface{}{
+				"expected_size": len(content),
+				"actual_size":   info.Size(),
+			})
+			// Não falha, mas registra o aviso
+		} else {
+			logger.Info("Arquivo escrito com sucesso: %s (tamanho: %d bytes)", path, info.Size())
+		}
+	} else {
+		logger.Error("ERRO: Não foi possível verificar o arquivo após escrita: %v", err)
 	}
 
 	// Log detalhado da operação
@@ -168,14 +228,18 @@ func executeEditFile(args map[string]interface{}) (interface{}, interface{}) {
 		"path":        path,
 		"file_exists": fileExists,
 		"new_size":    len(content),
-		"old_size":    len(oldContent),
+		"old_size":    oldSize,
+		"size_diff":   len(content) - oldSize,
+		"success":     true,
+		"timestamp":   time.Now().Format(time.RFC3339Nano),
 	}
-	logger.FileOperation("edit_file", path, metadata)
+	logger.FileOperation("edit_file_success", path, metadata)
 
 	if fileExists {
-		logger.Info("Arquivo atualizado: %s (old: %d bytes, new: %d bytes)", path, len(oldContent), len(content))
+		logger.Info("Arquivo atualizado com sucesso: %s (antigo: %d bytes, novo: %d bytes, diff: %d bytes)",
+			path, oldSize, len(content), len(content)-oldSize)
 	} else {
-		logger.Info("Arquivo criado: %s (%d bytes)", path, len(content))
+		logger.Info("Arquivo criado com sucesso: %s (%d bytes)", path, len(content))
 	}
 
 	return map[string]interface{}{

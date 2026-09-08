@@ -79,3 +79,41 @@ func Close() {
 		logFile.Close()
 	}
 }
+
+func FileError(action, path string, err error, metadata interface{}) {
+	entry := LogEntry{
+		Timestamp: time.Now().Format(time.RFC3339Nano),
+		Level:     "FILE_ERROR",
+		Message:   fmt.Sprintf("ERRO em %s | Path: %s | Erro: %v", action, path, err),
+		Metadata:  metadata,
+	}
+
+	// Log para console em vermelho
+	fmt.Printf("\033[31m[FILE_ERROR] %s\033[0m", entry.Message)
+
+	// Log para arquivo
+	if logFile != nil {
+		data, _ := json.Marshal(entry)
+		logFile.Write(append(data, '\n'))
+		logFile.Sync()
+	}
+}
+
+func FileWarning(action, path string, warning string, metadata interface{}) {
+	entry := LogEntry{
+		Timestamp: time.Now().Format(time.RFC3339Nano),
+		Level:     "FILE_WARNING",
+		Message:   fmt.Sprintf("AVISO em %s | Path: %s | %s", action, path, warning),
+		Metadata:  metadata,
+	}
+
+	// Log para console em amarelo
+	fmt.Printf("\033[33m[FILE_WARNING] %s\033[0m", entry.Message)
+
+	// Log para arquivo
+	if logFile != nil {
+		data, _ := json.Marshal(entry)
+		logFile.Write(append(data, '\n'))
+		logFile.Sync()
+	}
+}

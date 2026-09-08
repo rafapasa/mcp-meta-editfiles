@@ -20,6 +20,7 @@ func HandleMCP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(200)
@@ -32,6 +33,7 @@ func HandleMCP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// health check / teste no browser
 	if len(body) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "mcp online", "transport": "sse"})
@@ -63,6 +65,10 @@ func HandleMCP(w http.ResponseWriter, r *http.Request) {
 			},
 		}
 		logger.Info("Cliente inicializado")
+
+	case "notifications/initialized", "initialized", "ping":
+		// MCP manda isso depois do initialize, tem que retornar {}
+		result = map[string]interface{}{}
 
 	case "tools/list":
 		result = map[string]interface{}{
@@ -102,9 +108,9 @@ func HandleMCP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
 
-	// Push to SSE session if sessionId provided
+	// FIX CRÍTICO: se tem sessionId, estamos no modo SSE
+	// Não responde no HTTP, joga no canal SSE e retorna 202
 	sessID := r.URL.Query().Get("sessionId")
 	if sessID != "" {
 		mcp.SessionsMu.Lock()
@@ -116,7 +122,14 @@ func HandleMCP(w http.ResponseWriter, r *http.Request) {
 			default:
 				logger.Warn("Canal SSE cheio para sessão: %s", sessID)
 			}
+		} else {
+			logger.Warn("Sessão SSE não encontrada: %s", sessID)
 		}
 		mcp.SessionsMu.Unlock()
+		w.WriteHeader(http.StatusAccepted) // 202
+		return
 	}
+
+	// Sem sessionId = chamada HTTP direta (curl / teste)
+	json.NewEncoder(w).Encode(resp)
 }
