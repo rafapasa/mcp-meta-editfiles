@@ -20,7 +20,32 @@ Alterações e Melhorias Implementadas
         Cria logs diários em ~/.mcp-logs/mcp-YYYY-MM-DD.log
         Formato JSON para fácil processamento
         
+
+make run          # Deploy completo
+make stop         # Para tudo
+make status       # Status
+make test         # Testes
+make show-tokens  # Mostra tokens
+make help         # Ajuda
+make generate-tokens 
         
+
+Instruções de Uso
+2. Para fazer deploy completo:
+    ./deploy.sh
+
+3. Para parar tudo:
+    ./deploy.sh stop
+
+4. Para ver status:
+    ./deploy.sh status
+
+5. Para testar:
+    ./deploy.sh test
+
+6. Para ver tokens:
+    ./deploy.sh tokens
+
 # Compilar
 go build -o mcp-server
 
