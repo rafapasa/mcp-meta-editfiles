@@ -11,42 +11,78 @@ import (
 	"mcp-etoolstec-editfiles/logger"
 )
 
+func getToolMakeDir() Tool {
+	return Tool{
+		Name:        "make_dir",
+		Description: "Cria um diretório no sistema de arquivos.",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"path":     map[string]interface{}{"type": "string", "description": "Caminho absoluto do diretório a ser criado"},
+				"dir_name": map[string]interface{}{"type": "string", "description": "Nome do diretório a ser criado"},
+			},
+			"required": []string{"path", "dir_name"},
+		},
+	}
+}
+
+func getToolEditFile() Tool {
+	return Tool{
+		Name:        "edit_file",
+		Description: "Edita/cria arquivo com conteúdo novo. Usado para refatorar tenants, auth, etc. Sobrescreve arquivo.",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"path":    map[string]interface{}{"type": "string"},
+				"content": map[string]interface{}{"type": "string", "description": "Conteúdo completo novo do arquivo"},
+			},
+			"required": []string{"path", "content"},
+		},
+	}
+}
+
+func getToolReadFile() Tool {
+	return Tool{
+		Name:        "read_file",
+		Description: "Lê conteúdo completo de um arquivo .dart, .json, .yaml. Retorna texto. Use para pegar código antes de editar.",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"path": map[string]interface{}{"type": "string", "description": "Caminho absoluto do arquivo"},
+			},
+			"required": []string{"path"},
+		},
+	}
+}
+
+func getToolListFiles() Tool {
+	return Tool{
+		Name:        "list_files",
+		Description: "Lista arquivos e pastas de um diretório. Use para explorar front-openerp. Exemplo: {\"path\": \"/home/opc/prj/front-openerp/lib/presentation/pages/tenants\"}",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"path": map[string]interface{}{"type": "string", "description": "Caminho absoluto no servidor"},
+			},
+			"required": []string{"path"},
+		},
+	}
+}
+
 func GetTools() []Tool {
 	return []Tool{
-		{
-			Name:        "list_files",
-			Description: "Lista arquivos e pastas de um diretório. Use para explorar front-openerp. Exemplo: {\"path\": \"/home/opc/prj/front-openerp/lib/presentation/pages/tenants\"}",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"path": map[string]interface{}{"type": "string", "description": "Caminho absoluto no servidor"},
-				},
-				"required": []string{"path"},
-			},
-		},
-		{
-			Name:        "read_file",
-			Description: "Lê conteúdo completo de um arquivo .dart, .json, .yaml. Retorna texto. Use para pegar código antes de editar.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"path": map[string]interface{}{"type": "string", "description": "Caminho absoluto do arquivo"},
-				},
-				"required": []string{"path"},
-			},
-		},
-		{
-			Name:        "edit_file",
-			Description: "Edita/cria arquivo com conteúdo novo. Usado para refatorar tenants, auth, etc. Sobrescreve arquivo.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"path":    map[string]interface{}{"type": "string"},
-					"content": map[string]interface{}{"type": "string", "description": "Conteúdo completo novo do arquivo"},
-				},
-				"required": []string{"path", "content"},
-			},
-		},
+		// Arquivos e Diretórios
+		getToolListFiles(),
+		getToolReadFile(),
+		getToolEditFile(),
+		getToolMakeDir(),
+		getToolFindFiles(),
+
+		// Go - execução do toolchain (grupo conceitual separado)
+		getToolGoFmt(),
+		getToolGoImport(),
+		getToolGoTest(),
+		getToolGoBuild(),
 	}
 }
 
@@ -58,9 +94,48 @@ func ExecuteTool(name string, args map[string]interface{}) (interface{}, interfa
 		return executeReadFile(args)
 	case "edit_file":
 		return executeEditFile(args)
+	case "make_dir":
+		return executeMakeDir(args)
+	case "find_files":
+		return executeFindFiles(args)
+	case "go_fmt":
+		return executeGoFmt(args)
+	case "go_import":
+		return executeGoImport(args)
+	case "go_test":
+		return executeGoTest(args)
+	case "go_build":
+		return executeGoBuild(args)
 	default:
 		return nil, map[string]interface{}{"code": -32601, "message": "tool not found: " + name}
 	}
+}
+
+func executeMakeDir(args map[string]interface{}) (interface{}, interface{}) {
+	path, _ := args["path"].(string)
+	dirName, _ := args["dir_name"].(string)
+	if path == "" || dirName == "" {
+		return nil, map[string]interface{}{"code": -32602, "message": "path and dir_name are required"}
+	}
+
+	fullPath := filepath.Join(path, dirName)
+	if !config.IsAllowed(fullPath) {
+		return nil, map[string]interface{}{"code": -32602, "message": "path not allowed: " + fullPath}
+	}
+
+	logger.Info("Criando diretório: %s", fullPath)
+	err := os.MkdirAll(fullPath, 0755)
+	if err != nil {
+		logger.Error("Erro ao criar diretório %s: %v", fullPath, err)
+		return nil, map[string]interface{}{"code": -32603, "message": err.Error()}
+	}
+
+	logger.Info("Diretório criado com sucesso: %s", fullPath)
+	return map[string]interface{}{
+		"content": []map[string]interface{}{
+			{"type": "text", "text": fmt.Sprintf("Diretório criado: %s", fullPath)},
+		},
+	}, nil
 }
 
 func executeListFiles(args map[string]interface{}) (interface{}, interface{}) {
