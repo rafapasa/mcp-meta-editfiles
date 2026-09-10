@@ -160,6 +160,7 @@ func executeDartBuild(args map[string]interface{}) (interface{}, interface{}) {
 	return runDartCommand("dart_build", "compile", "build", false, args, false, false)
 }
 
+
 // runDartCommand executa um subcomando do SDK (dart ou flutter) dentro do
 // diretório informado e devolve a saída combinada (stdout+stderr) com código
 // de saída e duração.
