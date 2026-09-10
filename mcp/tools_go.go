@@ -143,7 +143,14 @@ func runGoCommand(toolName, goSub string, args map[string]interface{}, packagesR
 		dir = config.RootPath
 	}
 
-	if !config.IsAllowed(dir) {
+	// Comandos que escrevem no projeto (go fmt, go get) exigem permissão de
+	// MODIFICAÇÃO (AllowedRootsModify); comandos somente-leitura (go test,
+	// go build) usam a lista de LEITURA (AllowedRoots).
+	canRun := config.IsAllowed(dir)
+	if needsWrite {
+		canRun = config.IsAllowedModify(dir)
+	}
+	if !canRun {
 		logger.Warn("[%s] Caminho não permitido: %s", toolName, dir)
 		return nil, map[string]interface{}{"code": -32602, "message": "path not allowed: " + dir}
 	}

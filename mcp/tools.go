@@ -11,50 +11,6 @@ import (
 	"mcp-etoolstec-editfiles/logger"
 )
 
-func getToolMakeDir() Tool {
-	return Tool{
-		Name:        "make_dir",
-		Description: "Cria um diretório no sistema de arquivos.",
-		InputSchema: map[string]interface{}{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"path":     map[string]interface{}{"type": "string", "description": "Caminho absoluto do diretório a ser criado"},
-				"dir_name": map[string]interface{}{"type": "string", "description": "Nome do diretório a ser criado"},
-			},
-			"required": []string{"path", "dir_name"},
-		},
-	}
-}
-
-func getToolEditFile() Tool {
-	return Tool{
-		Name:        "edit_file",
-		Description: "Edita/cria arquivo com conteúdo novo. Usado para refatorar tenants, auth, etc. Sobrescreve arquivo.",
-		InputSchema: map[string]interface{}{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"path":    map[string]interface{}{"type": "string"},
-				"content": map[string]interface{}{"type": "string", "description": "Conteúdo completo novo do arquivo"},
-			},
-			"required": []string{"path", "content"},
-		},
-	}
-}
-
-func getToolReadFile() Tool {
-	return Tool{
-		Name:        "read_file",
-		Description: "Lê conteúdo completo de um arquivo .dart, .json, .yaml. Retorna texto. Use para pegar código antes de editar.",
-		InputSchema: map[string]interface{}{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"path": map[string]interface{}{"type": "string", "description": "Caminho absoluto do arquivo"},
-			},
-			"required": []string{"path"},
-		},
-	}
-}
-
 func getToolListFiles() Tool {
 	return Tool{
 		Name:        "list_files",
@@ -119,7 +75,7 @@ func executeMakeDir(args map[string]interface{}) (interface{}, interface{}) {
 	}
 
 	fullPath := filepath.Join(path, dirName)
-	if !config.IsAllowed(fullPath) {
+	if !config.IsAllowedModify(fullPath) {
 		return nil, map[string]interface{}{"code": -32602, "message": "path not allowed: " + fullPath}
 	}
 
@@ -207,7 +163,7 @@ func executeEditFile(args map[string]interface{}) (interface{}, interface{}) {
 	path, _ := args["path"].(string)
 	content, _ := args["content"].(string)
 
-	if !config.IsAllowed(path) {
+	if !config.IsAllowedModify(path) {
 		logger.Warn("Tentativa de editar arquivo não permitido: %s", path)
 		return nil, map[string]interface{}{"code": -32602, "message": "path not allowed"}
 	}

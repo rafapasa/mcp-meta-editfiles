@@ -39,7 +39,8 @@ func main() {
 	// Adicionar root customizado aos roots permitidos
 	config.AddAllowedRoot(config.RootPath)
 
-	logger.Info("Permitido: %v", config.AllowedRoots)
+	logger.Info("Permitido Ler: %v", config.AllowedRoots)
+	logger.Info("Permitido Modificar: %v", config.AllowedRootsModify)
 	logger.Info("Root: %s | Token: %v | ReadOnly: %v", config.RootPath, config.BearerToken != "", config.ReadOnly)
 	logger.Info("Servidor rodando em http://localhost%s", port)
 
@@ -52,7 +53,7 @@ func main() {
 	mux.HandleFunc("/file", handlers.HandleFile)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
-			w.Write([]byte("mcp-meta-editfiles MCP online - SSE at /sse, JSON-RPC at /mcp"))
+			w.Write([]byte("mcp-makeapp MCP online - SSE at /sse, JSON-RPC at /mcp"))
 			return
 		}
 		handlers.HandleFile(w, r)

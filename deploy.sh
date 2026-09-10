@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-PROJECT_DIR="/home/opc/prj/mcp-meta-editfiles"
-BINARY_NAME="mcp-meta-editfiles"
+PROJECT_DIR="/home/opc/prj/mcp-makeapp"
+BINARY_NAME="mcp-makeapp"
 TOKEN_FILE="$PROJECT_DIR/.tokens"
 CADDYFILE="/home/opc/Caddyfile"
 CADDY_BIN="/usr/local/bin/caddy"

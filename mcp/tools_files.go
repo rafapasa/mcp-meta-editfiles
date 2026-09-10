@@ -10,6 +10,50 @@ import (
 	"mcp-etoolstec-editfiles/logger"
 )
 
+func getToolMakeDir() Tool {
+	return Tool{
+		Name:        "make_dir",
+		Description: "Cria um diretório no sistema de arquivos.",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"path":     map[string]interface{}{"type": "string", "description": "Caminho absoluto do diretório a ser criado"},
+				"dir_name": map[string]interface{}{"type": "string", "description": "Nome do diretório a ser criado"},
+			},
+			"required": []string{"path", "dir_name"},
+		},
+	}
+}
+
+func getToolEditFile() Tool {
+	return Tool{
+		Name:        "edit_file",
+		Description: "Edita/cria arquivo com conteúdo novo. Usado para refatorar tenants, auth, etc. Sobrescreve arquivo.",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"path":    map[string]interface{}{"type": "string"},
+				"content": map[string]interface{}{"type": "string", "description": "Conteúdo completo novo do arquivo"},
+			},
+			"required": []string{"path", "content"},
+		},
+	}
+}
+
+func getToolReadFile() Tool {
+	return Tool{
+		Name:        "read_file",
+		Description: "Lê conteúdo completo de um arquivo .dart, .json, .yaml. Retorna texto. Use para pegar código antes de editar.",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"path": map[string]interface{}{"type": "string", "description": "Caminho absoluto do arquivo"},
+			},
+			"required": []string{"path"},
+		},
+	}
+}
+
 // getToolFindFiles define a tool "find_files" para procurar arquivos e
 // diretórios recursivamente dentro de uma raiz permitida.
 func getToolFindFiles() Tool {

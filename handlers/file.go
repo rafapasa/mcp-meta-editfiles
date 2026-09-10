@@ -58,5 +58,10 @@ func HandleFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not allowed", 403)
 		return
 	}
+	if !config.IsAllowedModify(path) {
+		logger.Warn("Tentativa de modificação de arquivo não permitido: %s", path)
+		http.Error(w, "not allowed", 403)
+		return
+	}
 	http.ServeFile(w, r, path)
 }
