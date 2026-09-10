@@ -39,6 +39,12 @@ func GetTools() []Tool {
 		getToolGoImport(),
 		getToolGoTest(),
 		getToolGoBuild(),
+
+		// Dart/Flutter - execução do toolchain (grupo conceitual separado)
+		getToolDartFmt(),
+		getToolDartImport(),
+		getToolDartTest(),
+		getToolDartBuild(),
 	}
 }
 
@@ -62,6 +68,14 @@ func ExecuteTool(name string, args map[string]interface{}) (interface{}, interfa
 		return executeGoTest(args)
 	case "go_build":
 		return executeGoBuild(args)
+	case "dart_fmt":
+		return executeDartFmt(args)
+	case "dart_import":
+		return executeDartImport(args)
+	case "dart_test":
+		return executeDartTest(args)
+	case "dart_build":
+		return executeDartBuild(args)
 	default:
 		return nil, map[string]interface{}{"code": -32601, "message": "tool not found: " + name}
 	}

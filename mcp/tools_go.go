@@ -161,16 +161,7 @@ func runGoCommand(toolName, goSub string, args map[string]interface{}, packagesR
 	}
 
 	// Coleta de pacotes/argumentos (aceita array ou string única).
-	var packages []string
-	if raw, ok := args["packages"].([]interface{}); ok {
-		for _, p := range raw {
-			if s, ok := p.(string); ok && strings.TrimSpace(s) != "" {
-				packages = append(packages, strings.TrimSpace(s))
-			}
-		}
-	} else if s, ok := args["packages"].(string); ok && strings.TrimSpace(s) != "" {
-		packages = append(packages, strings.TrimSpace(s))
-	}
+	packages := collectStringArgs(args, "packages")
 
 	if packagesRequired && len(packages) == 0 {
 		return nil, map[string]interface{}{
