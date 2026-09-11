@@ -10,12 +10,14 @@ var (
 	AllowedRoots = []string{
 		"/home/opc/prj/mcp-server-openerp",
 		"/home/opc/prj/front-openerp",
+		"/home/opc/prj/etoolstec-site",
 		"/home/opc/prj",
 		"/home/opc",
 	}
 	AllowedRootsModify = []string{
 		"/home/opc/prj/mcp-server-openerp",
 		"/home/opc/prj/front-openerp",
+		"/home/opc/prj/etoolstec-site",
 	}
 	BearerToken string
 	RootPath    string
@@ -44,6 +46,19 @@ func AddAllowedRoot(path string) {
 		}
 	}
 	AllowedRoots = append(AllowedRoots, abs)
+}
+
+func AddAllowedRootModify(path string) {
+	if path == "" {
+		return
+	}
+	abs, _ := filepath.Abs(path)
+	for _, r := range AllowedRootsModify {
+		if r == abs {
+			return
+		}
+	}
+	AllowedRootsModify = append(AllowedRootsModify, abs)
 }
 
 // withinRoot informa se "abs" está dentro da raiz "root" (incluindo a própria

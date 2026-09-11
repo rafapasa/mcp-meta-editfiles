@@ -48,7 +48,8 @@ func GetTools() []Tool {
 
 		// Makefile
 		getToolWireGen(),
-		getToolMOcksGen(),
+		getToolMocksGen(),
+		getToolMake(),
 	}
 }
 
@@ -81,9 +82,11 @@ func ExecuteTool(name string, args map[string]interface{}) (interface{}, interfa
 	case "dart_build":
 		return executeDartBuild(args)
 	case "wire_gen":
-		return executeWireGen()
+		return executeWireGen(args)
 	case "mocks_gen":
-		return executeMocksGen()
+		return executeMocksGen(args)
+	case "make":
+		return executeMake(args)
 	default:
 		return nil, map[string]interface{}{"code": -32601, "message": "tool not found: " + name}
 	}
